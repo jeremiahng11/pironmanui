@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pironman 5 — Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8D%93%3C/text%3E%3C/svg%3E" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#151a24; --panel2:#1b2230; --line:#26304a;
+    --txt:#e6ebf5; --muted:#8b97ad; --accent:#0a1aff; --accent2:#3b82f6;
+    --ok:#22c55e; --warn:#f59e0b; --hot:#ef4444; --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%,#141b2e 0%,var(--bg) 60%);color:var(--txt);min-height:100vh}
+  header{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid var(--line);
+    position:sticky;top:0;background:rgba(11,14,20,.85);backdrop-filter:blur(8px);z-index:5}
+  header h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.3px}
+  header .sub{color:var(--muted);font-size:12px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);box-shadow:0 0 0 0 rgba(34,197,94,.6)}
+  .dot.live{background:var(--ok);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.5)}70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+  .spacer{flex:1}
+  .btn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);padding:7px 12px;border-radius:9px;
+    cursor:pointer;font-size:13px}
+  .btn:hover{border-color:var(--accent2)}
+  main{max-width:1200px;margin:0 auto;padding:22px;display:grid;gap:16px}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);border:1px solid var(--line);
+    border-radius:var(--radius);padding:16px 18px}
+  .card h3{margin:0 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
+  .metric{font-size:30px;font-weight:700;line-height:1.1}
+  .metric small{font-size:14px;color:var(--muted);font-weight:500}
+  .bar{height:7px;border-radius:6px;background:var(--panel2);margin-top:12px;overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:6px;background:var(--accent2);transition:width .4s ease,background .4s}
+  .cores{display:flex;gap:6px;margin-top:12px}
+  .core{flex:1;text-align:center}
+  .core .cbar{height:44px;background:var(--panel2);border-radius:6px;position:relative;overflow:hidden;display:flex;align-items:flex-end}
+  .core .cbar > i{width:100%;background:var(--accent2);transition:height .4s ease,background .4s}
+  .core span{font-size:10px;color:var(--muted)}
+  .section-title{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin:6px 2px -4px;font-weight:600}
+  .chartwrap{height:260px}
+  .ctl-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .ctl-row:last-child{border-bottom:none}
+  .ctl-row label{font-size:13px;color:var(--txt)}
+  select,input[type=range],input[type=color]{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px}
+  input[type=range]{padding:0}
+  input[type=color]{padding:2px;width:44px;height:32px;cursor:pointer}
+  .switch{position:relative;width:46px;height:26px;display:inline-block}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:var(--panel2);border:1px solid var(--line);border-radius:20px;cursor:pointer;transition:.3s}
+  .slider::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:var(--muted);border-radius:50%;transition:.3s}
+  .switch input:checked + .slider{background:var(--accent2)}
+  .switch input:checked + .slider::before{transform:translateX(20px);background:#fff}
+  .info-grid{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:13px}
+  .info-grid .k{color:var(--muted)}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);
+    padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.3s;pointer-events:none}
+  .toast.show{opacity:1}
+  dialog{background:var(--panel);color:var(--txt);border:1px solid var(--line);border-radius:14px;padding:20px;width:min(420px,90vw)}
+  dialog::backdrop{background:rgba(0,0,0,.6)}
+  dialog h3{margin-top:0}
+  dialog input[type=text]{width:100%;padding:9px;margin:8px 0 16px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.two-col{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <span style="font-size:22px">🍓</span>
+  <div>
+    <h1>Pironman 5 <span id="devname" class="sub"></span></h1>
+    <div class="sub" id="statusline">connecting…</div>
+  </div>
+  <div class="spacer"></div>
+  <span class="dot" id="livedot"></span>
+  <button class="btn" id="cfgbtn">⚙ API</button>
+</header>
+
+<main>
+  <div class="grid" id="topgrid">
+    <div class="card"><h3>CPU Load</h3><div class="metric" id="m_cpu">–<small>%</small></div><div class="bar"><i id="b_cpu"></i></div></div>
+    <div class="card"><h3>CPU Temp</h3><div class="metric" id="m_temp">–<small>°</small></div><div class="bar"><i id="b_temp"></i></div></div>
+    <div class="card"><h3>Memory</h3><div class="metric" id="m_mem">–<small>%</small></div><div class="bar"><i id="b_mem"></i></div><div class="sub" id="s_mem"></div></div>
+    <div class="card"><h3>Disk</h3><div class="metric" id="m_disk">–<small>%</small></div><div class="bar"><i id="b_disk"></i></div><div class="sub" id="s_disk"></div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>GPU Temp</h3><div class="metric" id="m_gpu">–<small>°</small></div></div>
+    <div class="card"><h3>CPU Freq</h3><div class="metric" id="m_freq">–<small>MHz</small></div></div>
+    <div class="card"><h3>Fan</h3><div class="metric" id="m_fan">–<small>RPM/%</small></div></div>
+    <div class="card"><h3>Network</h3><div class="metric" style="font-size:20px" id="m_net">↓ – &nbsp; ↑ –</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Per-Core CPU</h3>
+    <div class="cores" id="cores"></div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="section-title" style="margin-top:0">History</div>
+      <div class="chartwrap"><canvas id="chart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-top:0">Controls</div>
+      <div class="ctl-row">
+        <label>RGB Enable</label>
+        <label class="switch"><input type="checkbox" id="rgb_enable"><span class="slider"></span></label>
+      </div>
+      <div class="ctl-row">
+        <label>RGB Style</label>
+        <select id="rgb_style">
+          <option>solid</option><option>breathing</option><option>flow</option>
+          <option>flow_reverse</option><option>rainbow</option><option>rainbow_reverse</option><option>hue_cycle</option>
+        </select>
+      </div>
+      <div class="ctl-row"><label>RGB Color</label><input type="color" id="rgb_color" value="#0a1aff"></div>
+      <div class="ctl-row"><label>Brightness <b id="rgb_brightness_v"></b></label><input type="range" id="rgb_brightness" min="0" max="100"></div>
+      <div class="ctl-row"><label>Speed <b id="rgb_speed_v"></b></label><input type="range" id="rgb_speed" min="0" max="100"></div>
+      <div class="ctl-row">
+        <label>Fan Mode</label>
+        <select id="fan_mode">
+          <option value="0">Off</option><option value="1">Quiet</option>
+          <option value="2">Balanced</option><option value="3">Performance</option><option value="4">Always On</option>
+        </select>
+      </div>
+      <div class="ctl-row">
+        <label>Power</label>
+        <span><button class="btn" id="rebootbtn">Reboot</button> <button class="btn" id="shutbtn" style="border-color:var(--hot)">Shutdown</button></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title" style="margin-top:0">Device</div>
+    <div class="info-grid" id="devinfo"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<dialog id="cfgdlg">
+  <h3>API Endpoint</h3>
+  <p class="sub">Base URL of the pironman5 dashboard API (default port 34001).</p>
+  <input type="text" id="apiInput" placeholder="http://192.168.0.157:34001" />
+  <div style="display:flex;gap:10px;justify-content:flex-end">
+    <button class="btn" id="cfgClose">Cancel</button>
+    <button class="btn" id="cfgSave" style="border-color:var(--accent2)">Save</button>
+  </div>
+</dialog>
+
+<script>
+const PREFIX = "/api/v1.0";
+const POLL_MS = 2000;
+const HIST_POINTS = 60;
+
+// ---- API base resolution: stored override, else current host:34001 ----
+function defaultBase(){ return `${location.protocol}//${location.hostname||"localhost"}:34001`; }
+let API = localStorage.getItem("pm_api") || defaultBase();
+
+const $ = id => document.getElementById(id);
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
+
+async function apiGet(path){
+  const r = await fetch(API+PREFIX+path, {cache:"no-store"});
+  const j = await r.json();
+  if(!j.status) throw new Error(j.error||"error");
+  return j.data;
+}
+async function apiPost(path, body){
+  const r = await fetch(API+PREFIX+path, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j = await r.json();
+  if(!j.status) throw new Error(j.error||"error");
+  return j.data;
+}
+
+// ---- helpers ----
+const fmtBytes = n => { if(n==null) return "–"; const u=["B","KB","MB","GB","TB"]; let i=0; n=+n; while(n>=1024&&i<u.length-1){n/=1024;i++;} return n.toFixed(i?1:0)+" "+u[i]; };
+const fmtSpeed = n => { n=+n||0; if(n<1024) return n.toFixed(0)+" B/s"; if(n<1048576) return (n/1024).toFixed(1)+" KB/s"; return (n/1048576).toFixed(2)+" MB/s"; };
+function heat(pct){ return pct<50?"var(--ok)":pct<80?"var(--warn)":"var(--hot)"; }
+function tempHeat(t){ return t<55?"var(--ok)":t<70?"var(--warn)":"var(--hot)"; }
+function setBar(el, pct, color){ el.style.width=Math.max(0,Math.min(100,pct))+"%"; el.style.background=color; }
+function uptime(bootTs){ if(!bootTs) return "–"; let s=Math.floor(Date.now()/1000 - bootTs); const d=Math.floor(s/86400); s%=86400; const h=Math.floor(s/3600); s%=3600; const m=Math.floor(s/60); return (d?d+"d ":"")+h+"h "+m+"m"; }
+
+// ---- disk key is dynamic (disk_/dev/nvme0n1_percent) ----
+function findDisk(d){
+  const perc = Object.keys(d).find(k=>k.startsWith("disk_")&&k.endsWith("_percent"));
+  if(!perc) return null;
+  const base = perc.slice(0,-("_percent".length));
+  return { name: base.replace(/^disk_/,""), percent:d[perc], total:d[base+"_total"], used:d[base+"_used"], free:d[base+"_free"] };
+}
+
+// ---- chart ----
+let chart;
+function initChart(){
+  const ctx=$("chart").getContext("2d");
+  chart=new Chart(ctx,{type:"line",data:{labels:[],datasets:[
+    {label:"CPU %",data:[],borderColor:"#3b82f6",backgroundColor:"rgba(59,130,246,.12)",fill:true,tension:.35,pointRadius:0,borderWidth:2},
+    {label:"CPU °C",data:[],borderColor:"#ef4444",fill:false,tension:.35,pointRadius:0,borderWidth:2,yAxisID:"y1"},
+    {label:"Mem %",data:[],borderColor:"#22c55e",fill:false,tension:.35,pointRadius:0,borderWidth:2},
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{intersect:false,mode:"index"},
+    plugins:{legend:{labels:{color:"#8b97ad",boxWidth:12,font:{size:11}}}},
+    scales:{
+      x:{ticks:{color:"#54607a",maxTicksLimit:6,font:{size:10}},grid:{color:"rgba(38,48,74,.4)"}},
+      y:{min:0,max:100,ticks:{color:"#54607a",font:{size:10}},grid:{color:"rgba(38,48,74,.4)"}},
+      y1:{position:"right",min:0,max:100,ticks:{color:"#54607a",font:{size:10}},grid:{drawOnChartArea:false}}
+    }}});
+}
+function pushChart(t,cpu,temp,mem){
+  const lbl=new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  const ds=chart.data;
+  ds.labels.push(lbl); ds.datasets[0].data.push(cpu); ds.datasets[1].data.push(temp); ds.datasets[2].data.push(mem);
+  if(ds.labels.length>HIST_POINTS){ ds.labels.shift(); ds.datasets.forEach(d=>d.data.shift()); }
+  chart.update();
+}
+
+// ---- render live data ----
+let coresBuilt=false;
+function render(d){
+  // top metrics
+  const cpu=d.cpu_percent??0, temp=d.cpu_temperature??0, mem=d.memory_percent??0;
+  $("m_cpu").innerHTML=cpu.toFixed(1)+'<small>%</small>'; setBar($("b_cpu"),cpu,heat(cpu));
+  $("m_temp").innerHTML=temp.toFixed(1)+'<small>°C</small>'; setBar($("b_temp"),temp,tempHeat(temp));
+  $("m_mem").innerHTML=mem.toFixed(1)+'<small>%</small>'; setBar($("b_mem"),mem,heat(mem));
+  $("s_mem").textContent=`${fmtBytes(d.memory_used)} / ${fmtBytes(d.memory_total)}`;
+
+  const disk=findDisk(d);
+  if(disk){ $("m_disk").innerHTML=(+disk.percent).toFixed(1)+'<small>%</small>'; setBar($("b_disk"),disk.percent,heat(disk.percent));
+    $("s_disk").textContent=`${fmtBytes(disk.used)} / ${fmtBytes(disk.total)} · ${disk.name}`; }
+
+  $("m_gpu").innerHTML=(d.gpu_temperature??0).toFixed(1)+'<small>°C</small>';
+  $("m_freq").innerHTML=(d.cpu_freq??0).toFixed(0)+'<small>MHz</small>';
+  const fan = d.pwm_fan_speed ?? d.gpio_fan_state ?? 0;
+  $("m_fan").innerHTML=fan+'<small></small>';
+  $("m_net").textContent=`↓ ${fmtSpeed(d.network_download_speed)}   ↑ ${fmtSpeed(d.network_upload_speed)}`;
+
+  // per-core
+  const n=d.cpu_count||0;
+  if(!coresBuilt && n){ let h=""; for(let i=0;i<n;i++) h+=`<div class="core"><div class="cbar"><i id="core${i}"></i></div><span>#${i}</span></div>`; $("cores").innerHTML=h; coresBuilt=true; }
+  for(let i=0;i<n;i++){ const v=d["cpu_"+i+"_percent"]??0; const el=$("core"+i); if(el){ el.style.height=v+"%"; el.style.background=heat(v); el.title=v.toFixed(0)+"%"; } }
+
+  pushChart(d.time, cpu, temp, mem);
+}
+
+// ---- controls: load current config into UI ----
+let cfgLoaded=false;
+async function loadConfig(){
+  try{
+    const c=(await apiGet("/get-config")).system||{};
+    $("rgb_enable").checked=!!c.rgb_enable;
+    if(c.rgb_style) $("rgb_style").value=c.rgb_style;
+    if(c.rgb_color) $("rgb_color").value=c.rgb_color;
+    $("rgb_brightness").value=c.rgb_brightness??30; $("rgb_brightness_v").textContent=(c.rgb_brightness??30);
+    $("rgb_speed").value=c.rgb_speed??50; $("rgb_speed_v").textContent=(c.rgb_speed??50);
+    if(c.gpio_fan_mode!=null) $("fan_mode").value=String(c.gpio_fan_mode);
+    cfgLoaded=true;
+  }catch(e){/* device info still works */}
+}
+
+async function loadDeviceInfo(){
+  try{
+    const info=await apiGet("/get-device-info");
+    $("devname").textContent="· "+(info.name||info.id||"");
+    const rows=[["Name",info.name],["ID",info.id],["Version",info.version],["Config",info.config_path]];
+    $("devinfo").innerHTML=rows.filter(r=>r[1]).map(r=>`<div class="k">${r[0]}</div><div>${r[1]}</div>`).join("");
+  }catch(e){}
+}
+
+// ---- wire controls ----
+function wireControls(){
+  $("rgb_enable").onchange=e=>send("/set-rgb-enable",{enable:e.target.checked},"RGB "+(e.target.checked?"on":"off"));
+  $("rgb_style").onchange=e=>send("/set-rgb-style",{style:e.target.value},"Style: "+e.target.value);
+  $("rgb_color").onchange=e=>send("/set-rgb-color",{color:e.target.value},"Color set");
+  $("rgb_brightness").oninput=e=>$("rgb_brightness_v").textContent=e.target.value;
+  $("rgb_brightness").onchange=e=>send("/set-rgb-brightness",{brightness:+e.target.value},"Brightness "+e.target.value);
+  $("rgb_speed").oninput=e=>$("rgb_speed_v").textContent=e.target.value;
+  $("rgb_speed").onchange=e=>send("/set-rgb-speed",{speed:+e.target.value},"Speed "+e.target.value);
+  $("fan_mode").onchange=e=>send("/set-fan-mode",{mode:+e.target.value},"Fan mode "+e.target.value);
+  $("rebootbtn").onclick=()=>{ if(confirm("Reboot the Pironman 5 now?")) send("/set-reboot",{},"Rebooting…"); };
+  $("shutbtn").onclick=()=>{ if(confirm("Shut down the Pironman 5 now?")) send("/set-shutdown",{},"Shutting down…"); };
+}
+async function send(path,body,msg){ try{ await apiPost(path,body); toast(msg); }catch(e){ toast("⚠ "+e.message); } }
+
+// ---- config dialog ----
+$("cfgbtn").onclick=()=>{ $("apiInput").value=API; $("cfgdlg").showModal(); };
+$("cfgClose").onclick=()=>$("cfgdlg").close();
+$("cfgSave").onclick=()=>{ const v=$("apiInput").value.trim().replace(/\/$/,""); if(v){ API=v; localStorage.setItem("pm_api",v);} $("cfgdlg").close(); coresBuilt=false; cfgLoaded=false; toast("API set: "+API); };
+
+// ---- main loop ----
+let failCount=0;
+async function tick(){
+  try{
+    const raw=await apiGet("/get-data?n=1");
+    const d=Array.isArray(raw)?raw[raw.length-1]:raw;
+    render(d);
+    if(!cfgLoaded) loadConfig();
+    $("livedot").classList.add("live");
+    $("statusline").textContent=`live · ${API} · uptime ${uptime(d.boot_time)}`;
+    failCount=0;
+  }catch(e){
+    failCount++;
+    $("livedot").classList.remove("live");
+    $("statusline").textContent=`⚠ cannot reach API (${API}) — click ⚙ API to fix · ${e.message}`;
+  }
+}
+
+initChart();
+wireControls();
+loadDeviceInfo();
+tick();
+setInterval(tick, POLL_MS);
+</script>
+</body>
+</html>
