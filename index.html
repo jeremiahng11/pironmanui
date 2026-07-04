@@ -123,8 +123,8 @@
       <div class="ctl-row">
         <label>Fan Mode</label>
         <select id="fan_mode">
-          <option value="0">Off</option><option value="1">Quiet</option>
-          <option value="2">Balanced</option><option value="3">Performance</option><option value="4">Always On</option>
+          <option value="0">Always On</option><option value="1">Performance</option>
+          <option value="2">Cool</option><option value="3">Balance</option><option value="4">Silent</option>
         </select>
       </div>
       <div class="ctl-row">
@@ -164,17 +164,19 @@ let API = localStorage.getItem("pm_api") || defaultBase();
 const $ = id => document.getElementById(id);
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2200); }
 
-async function apiGet(path){
-  const r = await fetch(API+PREFIX+path, {cache:"no-store"});
-  const j = await r.json();
-  if(!j.status) throw new Error(j.error||"error");
+async function parseSafe(r){
+  const text = await r.text();
+  let j;
+  try{ j = JSON.parse(text); }
+  catch(e){ throw new Error(`HTTP ${r.status}: server returned a non-JSON response (endpoint error)`); }
+  if(!j.status) throw new Error(j.error || `HTTP ${r.status}`);
   return j.data;
 }
+async function apiGet(path){
+  return parseSafe(await fetch(API+PREFIX+path, {cache:"no-store"}));
+}
 async function apiPost(path, body){
-  const r = await fetch(API+PREFIX+path, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-  const j = await r.json();
-  if(!j.status) throw new Error(j.error||"error");
-  return j.data;
+  return parseSafe(await fetch(API+PREFIX+path, {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}));
 }
 
 // ---- helpers ----
@@ -278,7 +280,7 @@ function wireControls(){
   $("rgb_brightness").onchange=e=>send("/set-rgb-brightness",{brightness:+e.target.value},"Brightness "+e.target.value);
   $("rgb_speed").oninput=e=>$("rgb_speed_v").textContent=e.target.value;
   $("rgb_speed").onchange=e=>send("/set-rgb-speed",{speed:+e.target.value},"Speed "+e.target.value);
-  $("fan_mode").onchange=e=>send("/set-fan-mode",{mode:+e.target.value},"Fan mode "+e.target.value);
+  $("fan_mode").onchange=e=>send("/set-fan-mode",{fan_mode:+e.target.value},"Fan mode: "+e.target.selectedOptions[0].text);
   $("rebootbtn").onclick=()=>{ if(confirm("Reboot the Pironman 5 now?")) send("/set-reboot",{},"Rebooting…"); };
   $("shutbtn").onclick=()=>{ if(confirm("Shut down the Pironman 5 now?")) send("/set-shutdown",{},"Shutting down…"); };
 }
