@@ -14,7 +14,7 @@ control.
 - Per-core CPU bars
 - Rolling history chart (CPU %, CPU °C, Mem %)
 - Hardware controls wired to the real API: RGB enable/style/color/brightness/speed,
-  fan mode
+  fan mode, reboot / shutdown
 - Configurable API endpoint (gear icon, stored in `localStorage`)
 - Dark, responsive, no build step, no dependencies beyond a CDN Chart.js
 
@@ -34,6 +34,7 @@ This UI consumes:
 | `POST /set-rgb-brightness` `{brightness}` | 0–100 |
 | `POST /set-rgb-speed` `{speed}` | 0–100 |
 | `POST /set-fan-mode` `{fan_mode}` | 0–4 |
+| `POST /set-reboot` / `POST /set-shutdown` (no body) | power (verified on pm_dashboard 1.3.18) |
 
 CORS is enabled server-side (`flask-cors`), so hosting this on a different
 origin/port than `:34001` works out of the box.
