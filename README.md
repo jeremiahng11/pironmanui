@@ -14,7 +14,7 @@ control.
 - Per-core CPU bars
 - Rolling history chart (CPU %, CPU °C, Mem %)
 - Hardware controls wired to the real API: RGB enable/style/color/brightness/speed,
-  fan mode, reboot / shutdown
+  fan mode
 - Configurable API endpoint (gear icon, stored in `localStorage`)
 - Dark, responsive, no build step, no dependencies beyond a CDN Chart.js
 
@@ -33,8 +33,7 @@ This UI consumes:
 | `POST /set-rgb-color` `{color}` | hex `#rrggbb` |
 | `POST /set-rgb-brightness` `{brightness}` | 0–100 |
 | `POST /set-rgb-speed` `{speed}` | 0–100 |
-| `POST /set-fan-mode` `{mode}` | 0–4 |
-| `POST /set-reboot` / `POST /set-shutdown` | power |
+| `POST /set-fan-mode` `{fan_mode}` | 0–4 |
 
 CORS is enabled server-side (`flask-cors`), so hosting this on a different
 origin/port than `:34001` works out of the box.
@@ -44,6 +43,15 @@ origin/port than `:34001` works out of the box.
 ### Just open it
 Open `index.html` in a browser on your LAN. If it can't reach the API, click
 **⚙ API** and enter `http://<pi-ip>:34001`.
+
+The default API endpoint is baked into `index.html` as `DEFAULT_API`
+(`http://192.168.0.157:34001`). Change that constant, or override per-deploy with
+`<meta name="pm-api" content="http://<pi-ip>:34001">` in the `<head>`. A user's ⚙
+override (stored in `localStorage`) always wins.
+
+> **HTTPS note:** browsers block `http://` API calls from an `https://` page
+> (mixed content). Serve this dashboard over **http://**, or reverse-proxy the
+> `:34001` API behind the same HTTPS origin.
 
 ### Docker / Coolify
 ```bash

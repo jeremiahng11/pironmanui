@@ -127,10 +127,6 @@
           <option value="2">Cool</option><option value="3">Balance</option><option value="4">Silent</option>
         </select>
       </div>
-      <div class="ctl-row">
-        <label>Power</label>
-        <span><button class="btn" id="rebootbtn">Reboot</button> <button class="btn" id="shutbtn" style="border-color:var(--hot)">Shutdown</button></span>
-      </div>
     </div>
   </div>
 
@@ -157,8 +153,13 @@ const PREFIX = "/api/v1.0";
 const POLL_MS = 2000;
 const HIST_POINTS = 60;
 
-// ---- API base resolution: stored override, else current host:34001 ----
-function defaultBase(){ return `${location.protocol}//${location.hostname||"localhost"}:34001`; }
+// ---- API base resolution ----
+// Priority: user override (⚙, localStorage) > build-time default > current host:34001.
+// Set DEFAULT_API to your Pi so the dashboard works without clicking ⚙ on first load.
+// Can also be overridden at deploy time via a <meta name="pm-api" content="..."> tag.
+const DEFAULT_API = document.querySelector('meta[name="pm-api"]')?.content?.trim()
+  || "http://192.168.0.157:34001";
+function defaultBase(){ return DEFAULT_API || `${location.protocol}//${location.hostname||"localhost"}:34001`; }
 let API = localStorage.getItem("pm_api") || defaultBase();
 
 const $ = id => document.getElementById(id);
@@ -281,8 +282,6 @@ function wireControls(){
   $("rgb_speed").oninput=e=>$("rgb_speed_v").textContent=e.target.value;
   $("rgb_speed").onchange=e=>send("/set-rgb-speed",{speed:+e.target.value},"Speed "+e.target.value);
   $("fan_mode").onchange=e=>send("/set-fan-mode",{fan_mode:+e.target.value},"Fan mode: "+e.target.selectedOptions[0].text);
-  $("rebootbtn").onclick=()=>{ if(confirm("Reboot the Pironman 5 now?")) send("/set-reboot",{},"Rebooting…"); };
-  $("shutbtn").onclick=()=>{ if(confirm("Shut down the Pironman 5 now?")) send("/set-shutdown",{},"Shutting down…"); };
 }
 async function send(path,body,msg){ try{ await apiPost(path,body); toast(msg); }catch(e){ toast("⚠ "+e.message); } }
 
